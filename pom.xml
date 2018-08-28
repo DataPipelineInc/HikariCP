@@ -29,7 +29,7 @@
 
    <groupId>com.zaxxer</groupId>
    <artifactId>HikariCP</artifactId>
-   <version>2.7.2</version>
+   <version>2.7.2.1-dp</version>
    <packaging>bundle</packaging>
 
    <name>HikariCP</name>
@@ -503,4 +503,15 @@
          </dependencies>
       </profile>
    </profiles>
+
+   <distributionManagement>
+      <snapshotRepository>
+         <id>datapipeline</id>
+         <url>http://registry.datapipeline.com:8081/nexus/content/repositories/snapshots</url>
+      </snapshotRepository>
+      <repository>
+         <id>datapipeline</id>
+         <url>http://registry.datapipeline.com:8081/nexus/content/repositories/releases</url>
+      </repository>
+   </distributionManagement>
 </project>
