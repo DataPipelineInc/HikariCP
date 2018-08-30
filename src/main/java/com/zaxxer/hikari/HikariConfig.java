@@ -19,6 +19,14 @@ package com.zaxxer.hikari;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
 import com.zaxxer.hikari.util.PropertyElf;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.DriverPropertyInfo;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -310,6 +318,63 @@ public class HikariConfig implements HikariConfigMXBean
    public String getDriverClassName()
    {
       return driverClassName;
+   }
+
+   private class DriverShim implements Driver {
+      private final Driver driver;
+
+      DriverShim(Driver d) {
+         this.driver = d;
+      }
+
+      public boolean acceptsURL(String u) throws SQLException {
+         return driver.acceptsURL(u);
+      }
+
+      @Override
+      public Connection connect(String u, Properties p) throws SQLException {
+         return driver.connect(u, p);
+      }
+
+      @Override
+      public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) throws SQLException {
+         return driver.getPropertyInfo(url, info);
+      }
+
+      @Override
+      public int getMajorVersion() {
+         return this.driver.getMajorVersion();
+      }
+
+      @Override
+      public int getMinorVersion() {
+         return this.driver.getMinorVersion();
+      }
+
+      @Override
+      public boolean jdbcCompliant() {
+         return this.driver.jdbcCompliant();
+      }
+
+      @Override
+      public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
+         return this.driver.getParentLogger();
+      }
+   }
+
+   public void setDriverClassName(String driverClassName, String driverLibPath)
+   {
+      try {
+         URL u = new URL("jar:file:"+driverLibPath+"!/");
+         URLClassLoader ucl = new URLClassLoader(new URL[] { u });
+         Driver d = (Driver)Class.forName("org.apache.hive.jdbc.HiveDriver", true, ucl).newInstance();
+         Driver driver = new DriverShim(d);
+         DriverManager.registerDriver(driver);
+         this.driverClassName = driverClassName;
+      } catch (Exception e) {
+         LOGGER.error("Failed to load driver class {} from URL class classloader at {}", driverClassName, driverLibPath);
+         throw new RuntimeException("Failed to instantiate class " + driverClassName, e);
+      }
    }
 
    public void setDriverClassName(String driverClassName)
